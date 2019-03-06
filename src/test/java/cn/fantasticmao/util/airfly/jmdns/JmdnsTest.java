@@ -26,7 +26,7 @@ public class JmdnsTest {
         jmdns.addServiceListener(AirPlayServiceInfo.AIR_SERVICE_TYPE, new SampleListener());
 
         // Wait a bit
-        TimeUnit.MINUTES.sleep(1);
+        TimeUnit.SECONDS.sleep(10);
     }
 
     private static class SampleListener implements ServiceListener {

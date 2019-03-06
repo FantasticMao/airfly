@@ -16,6 +16,7 @@ import org.junit.Test;
 
 import java.net.*;
 import java.util.Arrays;
+import java.util.Enumeration;
 
 /**
  * MdnsTest
@@ -24,17 +25,42 @@ import java.util.Arrays;
  * @since 2019/2/12
  */
 public class MdnsTest {
+    private NetworkInterface networkInterface;
+
+    public MdnsTest() throws SocketException {
+        Enumeration<NetworkInterface> networkInterfaceEnumeration = NetworkInterface.getNetworkInterfaces();
+        while (networkInterfaceEnumeration.hasMoreElements()) {
+            NetworkInterface ni = networkInterfaceEnumeration.nextElement();
+            if (ni.getHardwareAddress() == null) continue;
+            boolean ip4 = false;
+            boolean ip6 = false;
+            Enumeration<InetAddress> inetAddressEnumeration = ni.getInetAddresses();
+            while (inetAddressEnumeration.hasMoreElements()) {
+                InetAddress ia = inetAddressEnumeration.nextElement();
+                if (ia instanceof Inet4Address) {
+                    ip4 = true;
+                } else if (ia instanceof Inet6Address) {
+                    ip6 = true;
+                }
+                if (ip4 && ip6) {
+                    networkInterface = ni;
+                    break;
+                }
+            }
+        }
+    }
 
     @Test
-    public void test() throws InterruptedException, SocketException {
-        NetworkInterface wifiNetworkInterface = NetworkInterface.getByName("en0");
+    public void mdns() throws InterruptedException {
+        if (networkInterface == null) return;
+
         EventLoopGroup group = new NioEventLoopGroup();
         try {
             Bootstrap bootstrap = new Bootstrap()
                     .group(group)
                     .channelFactory(() -> new NioDatagramChannel(InternetProtocolFamily.IPv4))
                     .option(ChannelOption.SO_REUSEADDR, true)
-                    .option(ChannelOption.IP_MULTICAST_IF, wifiNetworkInterface)
+                    .option(ChannelOption.IP_MULTICAST_IF, networkInterface)
                     .localAddress(new InetSocketAddress(5353))
                     .handler(new ChannelInitializer<NioDatagramChannel>() {
                         @Override
@@ -62,13 +88,13 @@ public class MdnsTest {
             dnsResponse.addRecord(DnsSection.ANSWER, airPlayTypeTxtRecord);
 
             // A 类型记录
-            Inet4Address inet4Address = NetworkInterfaceUtils.getAvailableInet4Address(wifiNetworkInterface);
+            Inet4Address inet4Address = NetworkInterfaceUtils.getAvailableInet4Address(networkInterface);
             ByteBuf ip4Buf = Unpooled.wrappedBuffer(inet4Address.getAddress());
             DnsRecord typeARecord = new DefaultDnsRawRecord("maomaodeMacBook-Pro.local.", DnsRecordType.A, 120, ip4Buf);
             dnsResponse.addRecord(DnsSection.ADDITIONAL, typeARecord);
 
             // AAAA 类型记录
-            Inet6Address inet6Address = NetworkInterfaceUtils.getAvailableInet6Address(wifiNetworkInterface);
+            Inet6Address inet6Address = NetworkInterfaceUtils.getAvailableInet6Address(networkInterface);
             ByteBuf ip6Buf = Unpooled.wrappedBuffer(inet6Address.getAddress());
             DnsRecord typeA4Record = new DefaultDnsRawRecord("maomaodeMacBook-Pro.local.", DnsRecordType.AAAA, 120, ip6Buf);
             dnsResponse.addRecord(DnsSection.ADDITIONAL, typeA4Record);
@@ -78,5 +104,13 @@ public class MdnsTest {
         } finally {
             group.shutdownGracefully();
         }
+    }
+
+    @Test
+    public void bonjour() throws SocketException {
+        if (networkInterface == null) return;
+
+        Bonjour bonjour = new Bonjour("MaoMao", "maomaodeMacBook-Pro", networkInterface);
+        bonjour.run();
     }
 }
