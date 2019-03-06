@@ -1,6 +1,5 @@
 package cn.fantasticmao.util.airfly;
 
-import cn.fantasticmao.util.airfly.jmdns.MDnsService;
 import cn.fantasticmao.util.airfly.mdns.Bonjour;
 import cn.fantasticmao.util.airfly.rtsp.RtspProtocolService;
 
@@ -24,7 +23,7 @@ public class Main {
         new Bonjour("MaoMao", "maomaodeMacBook-Pro", wifi).run();
 
         // 开启 Rtsp 服务
-        new RtspProtocolService(wifi, MDnsService.PORT_AIRPLAY).run();
+        new RtspProtocolService(wifi, 7000).run();
 
         // Wait a bit
         TimeUnit.HOURS.sleep(1);
